@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Check In">
+<meta name="theme-color" content="#0a0a0a">
+<title>Check In</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --accent: #c8f135;
+    --accent-dim: rgba(200,241,53,0.12);
+    --text: #f0f0f0;
+    --text-muted: #666;
+    --text-dim: #444;
+    --red: #ff4444;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 0 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 20px 0;
+  }
+
+  .logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .streak-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(200,241,53,0.25);
+    padding: 4px 10px;
+    border-radius: 20px;
+    display: none;
+  }
+
+  /* MAIN CONTENT */
+  .main {
+    width: 100%;
+    max-width: 480px;
+    padding: 0 20px;
+    margin-top: 40px;
+    flex: 1;
+  }
+
+  /* IDLE STATE */
+  .idle-state { display: block; }
+
+  .clock-ring {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    margin: 0 auto 32px;
+  }
+
+  .clock-ring svg { transform: rotate(-90deg); }
+
+  .clock-ring .ring-bg {
+    fill: none;
+    stroke: var(--surface2);
+    stroke-width: 3;
+  }
+
+  .clock-ring .ring-fill {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 408;
+    stroke-dashoffset: 408;
+    transition: stroke-dashoffset 1s linear;
+  }
+
+  .clock-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .clock-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .clock-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .idle-heading {
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1.3;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .idle-heading span { color: var(--accent); font-weight: 400; }
+
+  .idle-sub {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    margin-bottom: 32px;
+  }
+
+  /* INTERVAL SELECTOR */
+  .interval-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  .interval-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+
+  .pill {
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .pill:hover { border-color: var(--accent); color: var(--text); }
+  .pill.active { background: var(--accent); color: #0a0a0a; border-color: var(--accent); font-weight: 500; }
+
+  /* START BUTTON */
+  .start-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: #0a0a0a;
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  .start-btn:hover { opacity: 0.9; }
+  .start-btn:active { transform: scale(0.99); }
+
+  .stop-btn {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.15s;
+    display: none;
+  }
+
+  .stop-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* PROMPT STATE */
+  .prompt-state {
+    display: none;
+    animation: fadeSlide 0.35s ease;
+  }
+
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .prompt-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .prompt-tag::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: blink 1.2s infinite;
+  }
+
+  @keyframes blink {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  .prompt-question {
+    font-size: 26px;
+    font-weight: 300;
+    line-height: 1.35;
+    color: var(--text);
+    margin-bottom: 28px;
+    letter-spacing: -0.01em;
+  }
+
+  .prompt-question em {
+    font-style: italic;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+  }
+
+  .write-area {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 1.7;
+    resize: none;
+    min-height: 120px;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+
+  .write-area::placeholder { color: var(--text-dim); }
+  .write-area:focus { border-color: rgba(200,241,53,0.4); }
+
+  .char-hint {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    margin-bottom: 20px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .char-hint span { color: var(--accent); }
+
+  .save-btn {
+    width: 100%;
+    padding: 15px;
+    background: var(--accent);
+    color: #0a0a0a;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: opacity 0.15s;
+    opacity: 0.4;
+  }
+
+  .save-btn.ready { opacity: 1; }
+  .save-btn.ready:hover { opacity: 0.85; }
+
+  .skip-link {
+    display: block;
+    text-align: center;
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.05em;
+    transition: color 0.15s;
+  }
+
+  .skip-link:hover { color: var(--text-muted); }
+
+  /* LOG */
+  .log-section { margin-top: 48px; display: none; }
+
+  .log-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .log-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .log-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  .log-entry {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    animation: fadeSlide 0.3s ease;
+  }
+
+  .log-entry-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .log-entry-q {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  .log-entry-text {
+    font-size: 15px;
+    color: var(--text);
+    line-height: 1.6;
+    font-weight: 300;
+  }
+
+  .log-entry-text.skipped {
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 13px;
+  }
+
+  /* NOTIFICATION BANNER */
+  .notif-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--accent);
+    color: #0a0a0a;
+    text-align: center;
+    padding: 14px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+    z-index: 999;
+    cursor: pointer;
+  }
+
+  .notif-banner.show { transform: translateY(0); }
+
+  /* INSTALL HINT */
+  .install-hint {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .install-hint strong {
+    color: var(--accent);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* DIVIDER */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 32px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="notif-banner" id="notifBanner" onclick="showPrompt()">
+  ⏰ Time to check in — tap to write
+</div>
+
+<div class="topbar">
+  <span class="logo">check·in</span>
+  <span class="streak-badge" id="streakBadge">🔥 0 entries</span>
+</div>
+
+<div class="main">
+
+  <!-- IDLE STATE -->
+  <div class="idle-state" id="idleState">
+
+    <div class="clock-ring" id="clockRing" style="display:none">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <circle class="ring-bg" cx="80" cy="80" r="65"/>
+        <circle class="ring-fill" id="ringFill" cx="80" cy="80" r="65"/>
+      </svg>
+      <div class="clock-center">
+        <div class="clock-time" id="clockTime">--:--</div>
+        <div class="clock-label">until next</div>
+      </div>
+    </div>
+
+    <div class="idle-heading">
+      Stop scrolling.<br>
+      <span>Start noticing.</span>
+    </div>
+    <p class="idle-sub">
+      Every hour, a question stops you. Two lines is all it takes —
+      enough to realize where your time actually went.
+    </p>
+
+    <div class="interval-label">Remind me every</div>
+    <div class="interval-pills">
+      <button class="pill" onclick="setInterval_(15)">15 min</button>
+      <button class="pill" onclick="setInterval_(30)">30 min</button>
+      <button class="pill active" onclick="setInterval_(60)">1 hour</button>
+      <button class="pill" onclick="setInterval_(90)">90 min</button>
+      <button class="pill" onclick="setInterval_(120)">2 hours</button>
+    </div>
+
+    <button class="start-btn" id="startBtn" onclick="startReminders()">
+      Start reminders
+    </button>
+    <button class="stop-btn" id="stopBtn" onclick="stopReminders()">
+      Stop
+    </button>
+    <button class="stop-btn" style="display:block;margin-top:8px;" onclick="playAlarmSound()">🔔 test alarm sound</button>
+
+    <div class="install-hint" id="installHint">
+      <strong>📱 Add to home screen</strong>
+      On iPhone: tap Share → "Add to Home Screen"<br>
+      On Android: tap menu → "Add to Home Screen"<br>
+      Then it works like a real app, always there.
+    </div>
+
+    <div class="log-section" id="logSection">
+      <hr class="divider">
+      <div class="log-header">
+        <span class="log-title">Today's entries</span>
+        <span class="log-count" id="logCount">0 written</span>
+      </div>
+      <div id="logList"></div>
+    </div>
+
+  </div>
+
+  <!-- PROMPT STATE -->
+  <div class="prompt-state" id="promptState">
+    <div class="prompt-tag">Check-in time</div>
+
+    <div class="prompt-question" id="promptQuestion"></div>
+
+    <textarea
+      class="write-area"
+      id="writeArea"
+      placeholder="Two lines. Honest ones."
+      oninput="onType()"
+    ></textarea>
+
+    <div class="char-hint">
+      <span id="charCount">0</span> characters — just be real
+    </div>
+
+    <button class="save-btn" id="saveBtn" onclick="saveEntry()">
+      Save and continue →
+    </button>
+
+    <span class="skip-link" onclick="skipEntry()">skip this one</span>
+  </div>
+
+</div>
+
+<script>
+const PROMPTS = [
+  "Where did the last hour actually go?",
+  "Are you where you planned to be right now — or did you drift?",
+  "Was your phone in your hand more than you wanted?",
+  "What pulled you away from what you meant to do?",
+  "If a friend asked what you did the last hour, what would you say?",
+  "Are you in bed right now when you wanted to be at your desk?",
+  "On a scale of 1–10, how intentional was the last hour?",
+  "What do you want the next hour to look like?",
+  "Name one thing you actually got done.",
+  "What would your best self say about the last hour?",
+  "How many times did you open Instagram in the last hour?",
+  "What did you avoid doing by scrolling?",
+  "What's one thing you can do in the next 10 minutes that matters?",
+  "Are you proud of how you spent the last hour?",
+  "What are you feeling right now, underneath the scrolling?"
+];
+
+let running = false;
+let intervalMin = 60;
+let timerID = null;
+let tickID = null;
+let nextAt = null;
+let promptIndex = 0;
+let entries = [];
+
+// Load from localStorage
+try {
+  const saved = localStorage.getItem('checkin_entries');
+  if (saved) entries = JSON.parse(saved);
+  const savedIdx = localStorage.getItem('checkin_prompt_idx');
+  if (savedIdx) promptIndex = parseInt(savedIdx);
+} catch(e) {}
+
+renderLog();
+updateStreak();
+requestNotifPermission();
+
+function requestNotifPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function setInterval_(min) {
+  intervalMin = min;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function startReminders() {
+  running = true;
+  document.getElementById('startBtn').textContent = 'Running...';
+  document.getElementById('startBtn').style.opacity = '0.5';
+  document.getElementById('startBtn').style.pointerEvents = 'none';
+  document.getElementById('stopBtn').style.display = 'block';
+  document.getElementById('clockRing').style.display = 'block';
+  document.getElementById('installHint').style.display = 'none';
+  scheduleNext();
+  tickID = setInterval(updateClock, 1000);
+  updateClock();
+}
+
+function stopReminders() {
+  running = false;
+  clearTimeout(timerID);
+  clearInterval(tickID);
+  nextAt = null;
+  document.getElementById('startBtn').textContent = 'Start reminders';
+  document.getElementById('startBtn').style.opacity = '1';
+  document.getElementById('startBtn').style.pointerEvents = 'auto';
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('clockRing').style.display = 'none';
+  document.getElementById('installHint').style.display = 'block';
+  document.getElementById('ringFill').style.strokeDashoffset = 408;
+}
+
+function scheduleNext() {
+  const ms = intervalMin * 60 * 1000;
+  nextAt = Date.now() + ms;
+  clearTimeout(timerID);
+  timerID = setTimeout(fireAlarm, ms);
+}
+
+function updateClock() {
+  if (!nextAt || !running) return;
+  const left = Math.max(0, Math.round((nextAt - Date.now()) / 1000));
+  const m = Math.floor(left / 60);
+  const s = left % 60;
+  document.getElementById('clockTime').textContent =
+    String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+
+  const total = intervalMin * 60;
+  const elapsed = total - left;
+  const pct = elapsed / total;
+  const circumference = 408;
+  const offset = circumference - (pct * circumference);
+  document.getElementById('ringFill').style.strokeDashoffset = offset;
+}
+
+function playAlarmSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep(startTime, freq, duration) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.4, startTime + 0.02);
+      gain.gain.linearRampToValueAtTime(0, startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    }
+    beep(ctx.currentTime + 0.0,  520, 0.18);
+    beep(ctx.currentTime + 0.22, 620, 0.18);
+    beep(ctx.currentTime + 0.44, 780, 0.35);
+    beep(ctx.currentTime + 0.9,  520, 0.18);
+    beep(ctx.currentTime + 1.12, 620, 0.18);
+    beep(ctx.currentTime + 1.34, 780, 0.35);
+  } catch(e) { console.log('Audio error:', e); }
+}
+
+function fireAlarm() {
+  playAlarmSound();
+
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('Check in ✍️', {
+      body: PROMPTS[promptIndex % PROMPTS.length],
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="%230a0a0a"/><text y=".9em" font-size="80">✍️</text></svg>'
+    });
+  }
+
+  const banner = document.getElementById('notifBanner');
+  banner.classList.add('show');
+  setTimeout(() => banner.classList.remove('show'), 5000);
+
+  if ('vibrate' in navigator) navigator.vibrate([150, 80, 150, 80, 300]);
+
+  showPrompt();
+}
+
+function showPrompt() {
+  document.getElementById('notifBanner').classList.remove('show');
+  document.getElementById('idleState').style.display = 'none';
+  document.getElementById('promptState').style.display = 'block';
+
+  const q = PROMPTS[promptIndex % PROMPTS.length];
+  document.getElementById('promptQuestion').textContent = q;
+  document.getElementById('writeArea').value = '';
+  document.getElementById('charCount').textContent = '0';
+  document.getElementById('saveBtn').classList.remove('ready');
+  document.getElementById('writeArea').focus();
+}
+
+function onType() {
+  const len = document.getElementById('writeArea').value.length;
+  document.getElementById('charCount').textContent = len;
+  const btn = document.getElementById('saveBtn');
+  if (len >= 10) btn.classList.add('ready'); else btn.classList.remove('ready');
+}
+
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbxGojFHWr05IN4nBK--_FJH7-5pQiONjXAuC5r_zSjf8Tl_9qpzRBU8JNeaYqVv_k034g/exec";
+
+function saveEntry() {
+  const text = document.getElementById('writeArea').value.trim();
+  if (text.length < 10) return;
+  const q = PROMPTS[promptIndex % PROMPTS.length];
+  promptIndex++;
+  localStorage.setItem('checkin_prompt_idx', promptIndex);
+
+  const now = new Date();
+  const entry = {
+    time: now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+    date: now.toLocaleDateString(),
+    question: q,
+    text
+  };
+  entries.unshift(entry);
+  try { localStorage.setItem('checkin_entries', JSON.stringify(entries.slice(0,200))); } catch(e) {}
+
+  sendToSheets(entry, 'written');
+  closePrompt();
+  renderLog();
+  updateStreak();
+}
+
+function sendToSheets(entry, status) {
+  const payload = {
+    date: entry.date,
+    time: entry.time,
+    question: entry.question,
+    entry: entry.text || '(skipped)',
+    status: status,
+    interval: intervalMin + ' min'
+  };
+  fetch(SHEET_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(err => console.log('Sheet sync failed:', err));
+}
+
+function skipEntry() {
+  const q = PROMPTS[promptIndex % PROMPTS.length];
+  promptIndex++;
+  localStorage.setItem('checkin_prompt_idx', promptIndex);
+
+  const now = new Date();
+  const entry = {
+    time: now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+    date: now.toLocaleDateString(),
+    question: q,
+    text: null
+  };
+  entries.unshift(entry);
+  try { localStorage.setItem('checkin_entries', JSON.stringify(entries.slice(0,200))); } catch(e) {}
+
+  sendToSheets(entry, 'skipped');
+  closePrompt();
+  renderLog();
+}
+
+function closePrompt() {
+  document.getElementById('idleState').style.display = 'block';
+  document.getElementById('promptState').style.display = 'none';
+  if (running) scheduleNext();
+}
+
+function renderLog() {
+  const today = new Date().toLocaleDateString();
+  const todayEntries = entries.filter(e => e.date === today);
+  const sec = document.getElementById('logSection');
+  const list = document.getElementById('logList');
+  const count = document.getElementById('logCount');
+
+  if (todayEntries.length === 0) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+
+  const written = todayEntries.filter(e => e.text).length;
+  count.textContent = written + ' written';
+
+  list.innerHTML = todayEntries.map(e => `
+    <div class="log-entry">
+      <div class="log-entry-meta">
+        <span>${e.time}</span>
+        <span>${e.date}</span>
+      </div>
+      <div class="log-entry-q">${e.question}</div>
+      <div class="log-entry-text ${!e.text ? 'skipped' : ''}">${e.text || 'skipped'}</div>
+    </div>
+  `).join('');
+}
+
+function updateStreak() {
+  const badge = document.getElementById('streakBadge');
+  const written = entries.filter(e => e.text).length;
+  if (written > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = '✍ ' + written + ' entries';
+  }
+}
+</script>
+</body>
+</html>
